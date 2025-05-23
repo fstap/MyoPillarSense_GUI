@@ -1,0 +1,1 @@
+Please unpack the .zip file to a folder. Then, either click on run.sh or open a Terminal window, navigate to the folder where run.sh is located and type "./run.sh".
