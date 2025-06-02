@@ -16,7 +16,8 @@ import serial.tools.list_ports
 import os
 import requests
 from gui import Ui_main
-
+import platform
+import numpy as np
 
 class ApplicationWindow(QtWidgets.QMainWindow,Ui_main):
     
@@ -35,23 +36,23 @@ class ApplicationWindow(QtWidgets.QMainWindow,Ui_main):
         self.saveBtn.clicked.connect(self.saveBtn_click)
         self.savePathBtn.clicked.connect(self.savePathBtn_click)
         self.timedMeasBtn.clicked.connect(self.timedMeasBtn_click)
-        self.ch1Fig = FastDrawingCanvas(x_len=1000, y_range=[0, 4100], interval=0.1,channel=1, parent=self)
-        self.ch2Fig = FastDrawingCanvas(x_len=1000, y_range=[0, 4100], interval=0.1,channel=2, parent=self)
-        self.ch3Fig = FastDrawingCanvas(x_len=1000, y_range=[0, 4100], interval=0.1,channel=3, parent=self)
-        self.ch4Fig = FastDrawingCanvas(x_len=1000, y_range=[0, 4100], interval=0.1,channel=4, parent=self)
-        self.ch5Fig = FastDrawingCanvas(x_len=1000, y_range=[0, 4100], interval=0.1,channel=5, parent=self)
-        self.ch6Fig = FastDrawingCanvas(x_len=1000, y_range=[0, 4100], interval=0.1,channel=6, parent=self)
-        self.ch7Fig = FastDrawingCanvas(x_len=1000, y_range=[0, 4100], interval=0.1,channel=7, parent=self)
-        self.ch8Fig = FastDrawingCanvas(x_len=1000, y_range=[0, 4100], interval=0.1,channel=8, parent=self)
-        self.chList = [self.ch1Fig,self.ch2Fig,self.ch3Fig,self.ch4Fig,self.ch5Fig,self.ch6Fig,self.ch7Fig,self.ch8Fig]
-        self.chGrid.addWidget(self.ch1Fig, 0, 0)
-        self.chGrid.addWidget(self.ch2Fig, 0, 1)
-        self.chGrid.addWidget(self.ch3Fig, 0, 2)
-        self.chGrid.addWidget(self.ch4Fig, 0, 3)
-        self.chGrid.addWidget(self.ch5Fig, 1, 0)
-        self.chGrid.addWidget(self.ch6Fig, 1, 1)
-        self.chGrid.addWidget(self.ch7Fig, 1, 2)
-        self.chGrid.addWidget(self.ch8Fig, 1, 3)
+        self.ch6Fig = FastDrawingCanvas(x_len=500, y_range=[0, 4100], interval=0.1,buff_pos=1, channel_name="Electrode 6", parent=self)
+        self.ch5Fig = FastDrawingCanvas(x_len=500, y_range=[0, 4100], interval=0.1,buff_pos=2, channel_name="Electrode 5", parent=self)
+        self.ch4Fig = FastDrawingCanvas(x_len=500, y_range=[0, 4100], interval=0.1,buff_pos=3, channel_name="Electrode 4", parent=self)
+        self.ch1Fig = FastDrawingCanvas(x_len=500, y_range=[0, 4100], interval=0.1,buff_pos=4, channel_name="Electrode 1", parent=self)
+        self.ch0Fig = FastDrawingCanvas(x_len=500, y_range=[0, 4100], interval=0.1,buff_pos=5, channel_name="Electrode 0", parent=self)
+        self.ch3Fig = FastDrawingCanvas(x_len=500, y_range=[0, 4100], interval=0.1,buff_pos=6, channel_name="Electrode 3", parent=self)
+        self.ch2Fig = FastDrawingCanvas(x_len=500, y_range=[0, 4100], interval=0.1,buff_pos=7, channel_name="Electrode 2", parent=self)
+        self.ch7Fig = FastDrawingCanvas(x_len=500, y_range=[0, 4100], interval=0.1,buff_pos=8, channel_name="Electrode 7", parent=self)
+        self.chList = [self.ch0Fig,self.ch1Fig,self.ch2Fig,self.ch3Fig,self.ch4Fig,self.ch5Fig,self.ch6Fig,self.ch7Fig]
+        self.chGrid.addWidget(self.ch0Fig, 0, 0)
+        self.chGrid.addWidget(self.ch1Fig, 0, 1)
+        self.chGrid.addWidget(self.ch2Fig, 0, 2)
+        self.chGrid.addWidget(self.ch3Fig, 0, 3)
+        self.chGrid.addWidget(self.ch4Fig, 1, 0)
+        self.chGrid.addWidget(self.ch5Fig, 1, 1)
+        self.chGrid.addWidget(self.ch6Fig, 1, 2)
+        self.chGrid.addWidget(self.ch7Fig, 1, 3)
         self.save_path = os.getcwd()
         self.saveText.setPlainText(self.save_path )
         # # 3. Show
@@ -162,8 +163,8 @@ class ApplicationWindow(QtWidgets.QMainWindow,Ui_main):
         headers = []
         columns = []
         for fig in self.chList:
-            headers.append(f"CH{fig.channel}X")
-            headers.append(f"CH{fig.channel}Y")
+            headers.append(f"{fig.channel_name}X")
+            headers.append(f"{fig.channel_name}Y")
             columns.append(list(fig.xbuf))
             columns.append(list(fig.ybuf))
         
@@ -235,7 +236,7 @@ class ApplicationWindow(QtWidgets.QMainWindow,Ui_main):
             ports = serial.tools.list_ports.comports()
             ICMOS_cnt = 0
             for port in ports:
-                if "1337" in port.hwid:
+                if "1337:0161" in port.hwid:
                     ICMOS_cnt = 1
                     self.usbLabel.setText(f"Connected on {port.device}.")
             if ICMOS_cnt == 0:
@@ -245,7 +246,7 @@ class ApplicationWindow(QtWidgets.QMainWindow,Ui_main):
                     self.measBtn.setText("Start Measurement")
                 
                     
-    def get_next_datapoint(self,channel):
+    def get_next_datapoint(self,buff_pos):
         if not self.ser == None and self.measuring == 1:
             if self.ser.is_open:
                 self.ser.reset_output_buffer()
@@ -253,7 +254,7 @@ class ApplicationWindow(QtWidgets.QMainWindow,Ui_main):
                 line = self.ser.readline().decode('ascii', errors='ignore').strip()
                 if line:
                     split_lines = line.split(",")
-                    return float(split_lines[channel-1])
+                    return float(split_lines[buff_pos-1])
             else:
                 return None
         else:
@@ -261,7 +262,7 @@ class ApplicationWindow(QtWidgets.QMainWindow,Ui_main):
 
 class FastDrawingCanvas(FigureCanvas):
 
-    def __init__(self, *args, x_len:int, y_range:List, interval:int, channel:int, parent, **kwargs) -> None:
+    def __init__(self, *args, x_len:int, y_range:List, interval:int, buff_pos:int, channel_name, parent, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.parent = parent
         self._x_len_ = x_len
@@ -277,8 +278,11 @@ class FastDrawingCanvas(FigureCanvas):
         self.draw()                                                        # added
         self._timer_ = self.new_timer(interval, [(self._update_canvas_, (), {})])
         self._timer_.start()
-        self.channel=channel
-        self._ax_.set_title(f"Channel {self.channel}")
+        self._timer_redraw_ = self.new_timer(1000, [(self._redraw_canvas_, (), {})])
+        self._timer_redraw_.start()
+        self.buff_pos = buff_pos
+        self.channel_name = channel_name
+        self._ax_.set_title(f"{self.channel_name}")
         return
     def _clear_canvas_(self) -> None:
         self._x_ = list(range(0, self._x_len_))
@@ -286,27 +290,36 @@ class FastDrawingCanvas(FigureCanvas):
         self.ybuf.clear()
         self.xbuf.clear()
         
+    def _redraw_canvas_(self) -> None:
+        self.draw()
+        
     def _update_canvas_(self) -> None:
         try:
-            data = round(self.parent.get_next_datapoint(self.channel), 2)
+            data = round(self.parent.get_next_datapoint(self.buff_pos), 2)
             self._y_.append(data)
             self._y_ = self._y_[-self._x_len_:]
-            self._line_.set_ydata(self._y_)
+            # N = 5
+            # y_padded = np.pad(self._y_, (N//2, N-1-N//2), mode='edge')
+            # y_smooth = np.convolve(y_padded, np.ones((N,))/N, mode='valid')
+            y_smooth = self._y_
+            self._line_.set_ydata(y_smooth)
             self._ax_.draw_artist(self._ax_.patch)
             self._ax_.draw_artist(self._line_)
+            self._ax_.set_ylim(ymin=min(self._y_)-100, ymax=max(self._y_)+100)
             self.update()
             self.ybuf.append(data)
             self.xbuf.append(time.time()-self.start_time)
             self.flush_events()
-        except:
-            pass
+        except Exception as e:
+            print(e)
         return
 
 if __name__ == "__main__":
     #os.environ["QT_SCALE_FACTOR"] = "1"
     #os.environ["QT_SCALE_FACTOR_ROUNDING_POLICY"] = "Floor" 
     #os.environ["QT_FONT_DPI"] = "96"
-    sys.argv += ['-platform', 'windows:darkmode=1']
+    if "Windows" in platform.system():
+        sys.argv += ['-platform', 'windows:darkmode=1']
     qapp = QtWidgets.QApplication(sys.argv)
     qapp.setStyle("fusion")
     app = ApplicationWindow()
